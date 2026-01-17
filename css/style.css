@@ -1,0 +1,285 @@
+:root {
+    --bg-dark: #121212;
+    --bg-panel: #1e1e1e;
+    --bg-light: #2c2c2c;
+    --accent: #00e5ff;
+    --accent-dim: #008c9e;
+    --text-main: #e0e0e0;
+    --text-muted: #888;
+    --border: #333;
+    --track-height: 80px;
+    --key-white: #ddd;
+    --key-black: #222;
+}
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#top-bar {
+    height: 50px;
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    gap: 20px;
+}
+
+.logo-area h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--accent);
+    display: inline-block;
+}
+
+.version {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.menu-bar button, .transport-bar button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-bar button:hover, .transport-bar button:hover {
+    background: var(--bg-light);
+    border-color: var(--accent);
+}
+
+.transport-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.time-display {
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: var(--accent);
+    background: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.record-btn {
+    color: #ff4444 !important;
+}
+
+.record-btn.recording {
+    background: #ff4444 !important;
+    color: white !important;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+#bpm-input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    width: 50px;
+    padding: 4px;
+    text-align: center;
+}
+
+.sig-input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    width: 30px;
+    text-align: center;
+}
+
+#workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+#track-sidebar {
+    width: 250px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+}
+
+#track-list-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.track-control {
+    height: var(--track-height);
+    border-bottom: 1px solid var(--border);
+    padding: 5px;
+    background: var(--bg-light);
+    position: relative;
+}
+
+.track-control.selected {
+    border-left: 3px solid var(--accent);
+}
+
+#sequencer-area {
+    flex: 1;
+    background: #151515;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#ruler-container {
+    height: 30px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+}
+
+#piano-roll-container {
+    flex: 1;
+    position: relative;
+    overflow: scroll;
+}
+
+#grid-canvas, #notes-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--accent);
+    z-index: 10;
+    pointer-events: none;
+}
+
+#inspector-sidebar {
+    width: 220px;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.inspector-panel {
+    padding: 10px;
+}
+
+#virtual-keyboard-wrapper {
+    height: 150px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--accent);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.kb-handle {
+    height: 5px;
+    width: 100%;
+    background: var(--border);
+    cursor: ns-resize;
+}
+
+.kb-controls {
+    padding: 2px 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    background: #000;
+}
+
+#virtual-keyboard {
+    flex: 1;
+    position: relative;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    padding: 5px;
+    background: #111;
+}
+
+.piano-key {
+    display: inline-block;
+    height: 100%;
+    border-radius: 0 0 4px 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+.key-white {
+    width: 40px;
+    background: var(--key-white);
+    border: 1px solid #999;
+    z-index: 1;
+}
+
+.key-black {
+    width: 24px;
+    background: var(--key-black);
+    height: 60%;
+    margin-left: -12px;
+    margin-right: -12px;
+    z-index: 2;
+    border: 1px solid #000;
+}
+
+.piano-key.active {
+    background: var(--accent);
+}
+
+#status-bar {
+    height: 25px;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    gap: 20px;
+}
