@@ -14,8 +14,9 @@ export const State = {
             zoomX: 1.0,
             zoomY: 1.0,
             scrollX: 0,
-            scrollY: 0,
+            scrollY: 600, // Start scrolled to middle C
             snapToGrid: "1/4",
+            magnetEnabled: true,
             octaveShift: 0
         },
         mixer: {
@@ -25,10 +26,10 @@ export const State = {
         tracks: [] 
     },
     
+    // Runtime state
+    lastNoteDuration: 1.0, // Default duration in beats
     clipboard: null,
-    history: [],
-    historyIndex: -1,
-
+    
     get currentTrack() {
         return this.project.tracks.find(t => t.selected);
     },
@@ -39,15 +40,14 @@ export const State = {
             id: id,
             name: `Track ${id}`,
             type: type,
-            instrument: "default_sine", 
+            instrument: "sine", 
             muted: false,
             soloed: false,
             selected: false,
             volume: 0.8,
             pan: 0,
             color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-            effects: [], 
-            automation: [],
+            effectsData: [], 
             events: [] 
         };
     },
@@ -66,16 +66,5 @@ export const State = {
         if (this.listeners[event]) {
             this.listeners[event].forEach(cb => cb(data));
         }
-    }
-};
-
-export const FXPresets = {
-    savePreset(effectChain) {
-        const data = {
-            type: "rhalfx",
-            version: "1.0",
-            chain: effectChain
-        };
-        return JSON.stringify(data);
     }
 };
