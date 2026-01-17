@@ -25,6 +25,7 @@ const init = () => {
     renderTrackList();
     setupEventListeners();
     setupToolBar();
+    setupKeyboardLayout();
     
     State.on('projectLoaded', () => {
         renderTrackList();
@@ -34,17 +35,18 @@ const init = () => {
     
     requestAnimationFrame(uiLoop);
 
-    // Initial scroll to center
+    // Initial scroll
     setTimeout(() => {
         const vp = DOM.el('piano-roll-viewport');
         if(vp) vp.scrollTop = 1500; 
+        PianoRoll.render();
+        setupKeyboardLayout();
     }, 100);
 };
 
 const setupToolBar = () => {
     const tools = ['draw', 'select', 'delete'];
     if (!State.tool) State.tool = 'draw';
-    
     tools.forEach(t => {
         DOM.on(`tool-${t}`, 'click', () => {
             State.tool = t;
@@ -64,6 +66,13 @@ const setupEventListeners = () => {
         Sequencer.stop();
         togglePlayButton(false);
         DOM.el('time-display').innerText = "00:00:00";
+        Sequencer.rewind();
+        DOM.el('playhead').style.left = '0px';
+    });
+
+    DOM.on('btn-rewind', 'click', () => {
+        Sequencer.rewind();
+        DOM.el('playhead').style.left = '0px';
     });
 
     DOM.on('bpm-input', 'change', (e) => Sequencer.setBpm(parseInt(e.target.value)));
@@ -75,13 +84,117 @@ const setupEventListeners = () => {
         State.project.tracks.push(t);
         renderTrackList();
         PianoRoll.render();
+        Inspector.render();
+    });
+
+    DOM.on('grid-snap-select', 'change', (e) => {
+        State.project.view.snapToGrid = e.target.value;
+    });
+
+    // Magnet Button
+    const magBtn = DOM.el('magnet-btn-wrapper');
+    if(magBtn) {
+        magBtn.onclick = () => {
+            State.project.view.magnetEnabled = !State.project.view.magnetEnabled;
+            DOM.el('icon-magnet').style.color = State.project.view.magnetEnabled ? '#00bcd4' : '#666';
+        };
+    }
+
+    // Octave Buttons
+    DOM.on('btn-octave-up', 'click', () => {
+        if(State.project.view.octaveShift < 3) {
+            State.project.view.octaveShift++;
+            DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift + 4}`;
+            setupKeyboardLayout();
+        }
+    });
+
+    DOM.on('btn-octave-down', 'click', () => {
+        if(State.project.view.octaveShift > -3) {
+            State.project.view.octaveShift--;
+            DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift + 4}`;
+            setupKeyboardLayout();
+        }
+    });
+
+    // Keyboard Resize
+    const handle = DOM.el('kb-resize-handle');
+    let isResizingKb = false;
+    let startY = 0;
+    let startH = 0;
+    handle.addEventListener('mousedown', (e) => {
+        isResizingKb = true;
+        startY = e.clientY;
+        startH = DOM.el('virtual-keyboard-wrapper').offsetHeight;
+        document.body.style.cursor = 'ns-resize';
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!isResizingKb) return;
+        const delta = startY - e.clientY; 
+        const newH = startH + delta;
+        if (newH > 50 && newH < 400) {
+            DOM.el('virtual-keyboard-wrapper').style.height = `${newH}px`;
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        isResizingKb = false;
+        document.body.style.cursor = 'default';
+    });
+
+    // Ruler Scroll Sync
+    const vp = DOM.el('piano-roll-viewport');
+    vp.addEventListener('scroll', () => {
+        State.project.view.scrollX = vp.scrollLeft;
+        State.project.view.scrollY = vp.scrollTop;
+        DOM.el('ruler-scroll-area').scrollLeft = vp.scrollLeft;
+        // Also sync sticky keys
+        DOM.el('sticky-keys').scrollTop = vp.scrollTop;
+    });
+
+    // PC Keyboard
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; 
+        if (e.repeat) return;
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if(Sequencer.isPlaying) { Sequencer.stop(); togglePlayButton(false); }
+            else { Sequencer.play(); togglePlayButton(true); }
+            return;
+        }
+
+        const keyMap = {
+            'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67, 'y': 68, 'h': 69, 'u': 70, 'j': 71,
+            'k': 72, 'o': 73, 'l': 74, 'p': 75, ';': 76, '\'': 77
+        };
+        if (keyMap[e.key]) {
+            AudioEngine.init();
+            AudioEngine.resume();
+            const note = keyMap[e.key] + (State.project.view.octaveShift * 12);
+            if (note >= 0 && note <= 127) {
+                const track = State.currentTrack;
+                AudioEngine.synth.playNote(note, AudioEngine.currentTime, 0.5, 100, 'instrument', track ? track.effectsData : []);
+                const keyEl = document.querySelector(`[data-note="${note}"]`); 
+                if(keyEl) keyEl.classList.add('active');
+            }
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const keyMap = {
+             'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67, 'y': 68, 'h': 69, 'u': 70, 'j': 71,
+            'k': 72, 'o': 73, 'l': 74, 'p': 75, ';': 76, '\'': 77
+        };
+        if (keyMap[e.key]) {
+             const note = keyMap[e.key] + (State.project.view.octaveShift * 12);
+             const keyEl = document.querySelector(`[data-note="${note}"]`); 
+             if(keyEl) keyEl.classList.remove('active');
+        }
     });
 
     setupDropdowns();
 };
 
 const setupDropdowns = () => {
-    // Project Menu
     const btnProject = DOM.el('btn-project');
     const menuProject = createDropdown([
         { text: 'Load Project', icon: 'fa-folder-open', cb: () => DOM.el('file-import-input').click() },
@@ -93,6 +206,13 @@ const setupDropdowns = () => {
     
     btnProject.onclick = (e) => toggleDropdown(e, menuProject);
     DOM.on('file-import-input', 'change', (e) => Importer.handleFileSelect(e));
+
+    const btnOptions = DOM.el('btn-options');
+    const menuOptions = createDropdown([
+        { text: 'Theme Settings (Coming Soon)', icon: 'fa-palette', cb: () => {} },
+        { text: 'Audio Settings (Coming Soon)', icon: 'fa-sliders', cb: () => {} }
+    ]);
+    btnOptions.onclick = (e) => toggleDropdown(e, menuOptions);
 };
 
 function createDropdown(items) {
@@ -105,10 +225,7 @@ function createDropdown(items) {
             d.appendChild(DOM.create('div', 'dropdown-separator'));
         } else {
             const b = DOM.create('button', '', `<i class="fa-solid ${item.icon}"></i> ${item.text}`);
-            b.onclick = () => {
-                item.cb();
-                d.style.display = 'none';
-            };
+            b.onclick = () => { item.cb(); d.style.display = 'none'; };
             d.appendChild(b);
         }
     });
@@ -153,7 +270,6 @@ const renderTrackList = () => {
             </div>
         `;
 
-        // Selection Logic
         div.onclick = (e) => {
             if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.classList.contains('track-opts-btn')) {
                 State.project.tracks.forEach(t => t.selected = false);
@@ -164,37 +280,66 @@ const renderTrackList = () => {
             }
         };
 
-        // Context Menu
         const optBtn = div.querySelector('.track-opts-btn');
         optBtn.onclick = (e) => {
             const menu = createDropdown([
-                { text: 'Rename', icon: 'fa-pen', cb: () => {
-                    const n = prompt("Track Name:", track.name);
-                    if(n) { track.name = n; renderTrackList(); }
-                }},
-                { text: 'Duplicate', icon: 'fa-copy', cb: () => {
-                    const n = JSON.parse(JSON.stringify(track));
-                    n.id = State.project.tracks.length + 1;
-                    n.name += " (Copy)";
-                    State.project.tracks.push(n);
-                    renderTrackList();
-                }},
-                { text: 'Delete', icon: 'fa-trash', cb: () => {
-                    if(confirm("Delete Track?")) {
-                        State.project.tracks = State.project.tracks.filter(t => t.id !== track.id);
-                        if(State.project.tracks.length) State.project.tracks[0].selected = true;
-                        renderTrackList();
-                        PianoRoll.render();
-                    }
-                }},
-                { separator: true },
-                { text: 'Load SoundFont (Placeholder)', icon: 'fa-music', cb: () => alert("SoundFont Loading logic here") }
+                { text: 'Rename', icon: 'fa-pen', cb: () => { const n = prompt("Track Name:", track.name); if(n) { track.name = n; renderTrackList(); }}},
+                { text: 'Duplicate', icon: 'fa-copy', cb: () => { const n = JSON.parse(JSON.stringify(track)); n.id = State.project.tracks.length + 1; n.name += " (Copy)"; State.project.tracks.push(n); renderTrackList(); }},
+                { text: 'Delete', icon: 'fa-trash', cb: () => { if(confirm("Delete?")) { State.project.tracks = State.project.tracks.filter(t => t.id !== track.id); if(State.project.tracks.length) State.project.tracks[0].selected = true; renderTrackList(); PianoRoll.render(); }}}
             ]);
             toggleDropdown(e, menu);
         };
         
         container.appendChild(div);
     });
+};
+
+const setupKeyboardLayout = () => {
+    const kb = DOM.el('virtual-keyboard');
+    kb.innerHTML = '';
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    const keyMapReverse = {
+        0: 'A', 1: 'W', 2: 'S', 3: 'E', 4: 'D', 5: 'F', 6: 'T', 7: 'G', 8: 'Y', 9: 'H', 10: 'U', 11: 'J',
+        12: 'K', 13: 'O', 14: 'L', 15: 'P', 16: ';', 17: '\''
+    };
+
+    // Range C2 (36) to C7 (96)
+    for(let i=36; i<97; i++) {
+        const octave = Math.floor(i / 12) - 1; 
+        const noteIdx = i % 12;
+        const noteName = notes[noteIdx];
+        const isBlack = noteName.includes('#');
+        const key = DOM.create('div', `piano-key ${isBlack ? 'key-black' : 'key-white'}`);
+        key.dataset.note = i; 
+        
+        // Label Mapping relative to octave shift
+        // Current Shift 0 means 60 is Middle C. 
+        // 60-77 are mapped to keys.
+        // baseKey = 60 + (shift * 12).
+        const startMapNote = 60 + (State.project.view.octaveShift * 12);
+        const diff = i - startMapNote;
+        
+        let labelHtml = '';
+        if (diff >= 0 && diff <= 17) {
+             labelHtml = `<span class="key-label" style="color:${isBlack?'#aaa':'#555'}; font-weight:bold;">${keyMapReverse[diff] || ''}</span>`;
+        } else if (!isBlack && noteIdx === 0) {
+             labelHtml = `<span class="key-label">C${octave}</span>`;
+        }
+
+        key.innerHTML = labelHtml;
+        
+        key.addEventListener('mousedown', () => {
+            AudioEngine.init();
+            AudioEngine.resume();
+            const track = State.currentTrack;
+            AudioEngine.synth.playNote(i, AudioEngine.currentTime, 0.5, 100, 'instrument', track ? track.effectsData : []);
+            key.classList.add('active');
+            setTimeout(() => key.classList.remove('active'), 200);
+        });
+
+        kb.appendChild(key);
+    }
 };
 
 const togglePlayButton = (playing) => {
@@ -208,12 +353,13 @@ const uiLoop = () => {
          const t = Sequencer.currentSixteenthNote * (60 / Sequencer.bpm) / 4;
          const mins = Math.floor(t / 60).toString().padStart(2, '0');
          const secs = Math.floor(t % 60).toString().padStart(2, '0');
-         DOM.el('time-display').innerText = `${mins}:${secs}:${Math.floor((t%1)*100).toString().padStart(2,'0')}`;
+         const ms = Math.floor((t % 1) * 100).toString().padStart(2, '0');
+         DOM.el('time-display').innerText = `${mins}:${secs}:${ms}`;
          
-         const ph = DOM.el('playhead');
          const view = State.project.view;
          const bw = PianoRoll.config.beatWidth * view.zoomX;
-         ph.style.left = `${(Sequencer.currentSixteenthNote / 4) * bw}px`;
+         const px = (Sequencer.currentSixteenthNote / 4) * bw;
+         DOM.el('playhead').style.left = `${px}px`;
     }
     requestAnimationFrame(uiLoop);
 };
