@@ -10,130 +10,54 @@
     --key-black: #111;
 }
 
-body {
-    margin: 0;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
-    font-family: 'Segoe UI', sans-serif;
-    height: 100vh;
-    overflow: hidden;
-    user-select: none;
-}
-
+* { box-sizing: border-box; user-select: none; }
+body { margin: 0; background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
 #app-container { display: flex; flex-direction: column; height: 100%; }
 
-#top-bar {
-    height: 50px;
-    background-color: #252525;
-    border-bottom: 1px solid #000;
-    display: flex;
-    align-items: center;
-    padding: 0 15px;
-    gap: 15px;
-    z-index: 100;
-}
-
+#top-bar { height: 50px; background: #252525; border-bottom: 1px solid #000; display: flex; align-items: center; padding: 0 15px; gap: 15px; z-index: 100; }
 .logo-area h1 { margin: 0; font-size: 1.2rem; color: var(--accent); }
 .version { font-size: 0.7rem; color: #888; margin-left: 5px; }
 
-button {
-    background: #333; border: 1px solid #444; color: #eee;
-    padding: 5px 10px; border-radius: 4px; cursor: pointer;
-}
+button { background: #333; border: 1px solid #444; color: #eee; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
 button:hover { background: #444; }
 button.active { background: var(--accent); color: #000; font-weight: bold; }
 
 .transport-bar { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.time-display { font-family: monospace; font-size: 1.1rem; color: var(--accent); background: #000; padding: 4px 8px; border-radius: 3px; min-width: 90px; text-align: center; }
+.time-display { font-family: monospace; font-size: 1.1rem; color: var(--accent); background: #000; padding: 4px 8px; border-radius: 3px; min-width: 80px; text-align: center; }
 
 #workspace { flex: 1; display: flex; overflow: hidden; background: #000; position: relative; }
-
-#track-sidebar, #inspector-sidebar {
-    width: 250px; background: var(--bg-panel); display: flex; flex-direction: column; z-index: 20;
-    border-right: 1px solid #000;
-}
+#track-sidebar, #inspector-sidebar { width: 250px; background: var(--bg-panel); display: flex; flex-direction: column; z-index: 20; border-right: 1px solid #000; }
 #inspector-sidebar { border-left: 1px solid #000; border-right: none; }
-
 .sidebar-header { padding: 10px; background: #2a2a2a; border-bottom: 1px solid #000; font-weight: bold; }
 #track-list-container, #fx-list { flex: 1; overflow-y: auto; }
-
-.track-control {
-    padding: 8px; border-bottom: 1px solid #000; background: #222;
-}
+.track-control { padding: 8px; border-bottom: 1px solid #000; background: #222; }
 .track-control.selected { border-left: 4px solid var(--accent); background: #2a2a2a; }
 
-#sequencer-area {
-    flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden;
-}
-
-#piano-roll-toolbar {
-    height: 36px; background: #222; border-bottom: 1px solid #000;
-    display: flex; align-items: center; padding: 0 10px; gap: 10px;
-    z-index: 30;
-}
-
+#sequencer-area { flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+#piano-roll-toolbar { height: 36px; background: #222; border-bottom: 1px solid #000; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 30; }
 .tool-group { display: flex; gap: 2px; }
-.tool-btn { padding: 4px 8px; font-size: 0.9rem; }
-.tool-separator { width: 1px; height: 20px; background: #444; margin: 0 10px; }
+.tool-btn { padding: 4px 8px; }
 
-#piano-roll-viewport {
-    flex: 1; overflow: auto; position: relative;
-    background: #151515;
-}
+#piano-roll-viewport { flex: 1; overflow: auto; position: relative; background: #151515; }
+#piano-roll-content { position: relative; display: flex; min-height: 100%; }
+#sticky-keys { position: sticky; left: 0; z-index: 10; background: #151515; border-right: 1px solid #333; flex-shrink: 0; overflow: hidden; }
+#grid-wrapper { position: relative; flex: 1; }
+#grid-canvas, #notes-canvas { position: absolute; top: 0; left: 0; }
+#playhead { position: absolute; top: 0; width: 1px; height: 100%; background: #fff; z-index: 5; pointer-events: none; }
+.playhead-triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; position: absolute; left: -6px; top: 0; }
 
-#piano-roll-content {
-    position: relative;
-    display: flex;
-    min-height: 100%;
-}
-
-#sticky-keys {
-    position: sticky;
-    left: 0;
-    z-index: 15;
-    background: #151515;
-    border-right: 1px solid #333;
-    flex-shrink: 0;
-}
-
-#grid-wrapper {
-    position: relative;
-    flex-shrink: 0;
-}
-
-#grid-canvas, #notes-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
-#notes-canvas { z-index: 5; }
-
-#playhead {
-    position: absolute; top: 0; width: 1px; height: 100%; background: #fff; z-index: 6; pointer-events: none;
-}
-.playhead-triangle {
-    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff;
-    position: absolute; left: -6px; top: 0;
-}
-
-#virtual-keyboard-wrapper {
-    height: 150px; background: #1e1e1e; border-top: 2px solid var(--accent);
-    display: flex; flex-direction: column; z-index: 40;
-}
-.kb-handle { height: 6px; background: #333; cursor: ns-resize; }
+#virtual-keyboard-wrapper { height: 150px; background: #1e1e1e; border-top: 2px solid var(--accent); display: flex; flex-direction: column; z-index: 40; position: relative; }
+.kb-handle { height: 6px; background: #333; cursor: ns-resize; border-bottom: 1px solid #000; }
 .kb-controls { background: #111; padding: 4px; display: flex; justify-content: center; gap: 20px; }
-#virtual-keyboard { flex: 1; display: flex; overflow-x: auto; padding: 5px; background: #000; }
+#virtual-keyboard { flex: 1; display: flex; overflow-x: auto; padding: 5px; background: #000; white-space: nowrap; }
 
-.piano-key { position: relative; height: 100%; cursor: pointer; flex-shrink: 0; }
+.piano-key { display: inline-block; height: 100%; cursor: pointer; position: relative; box-shadow: inset 0 -2px 5px rgba(0,0,0,0.5); }
 .key-white { width: 40px; background: #ddd; border: 1px solid #000; z-index: 1; }
-.key-black { width: 24px; background: #111; height: 60%; margin: 0 -12px; z-index: 2; border: 1px solid #000; }
+.key-black { width: 24px; background: #111; height: 60%; margin-left: -12px; margin-right: -12px; z-index: 2; border: 1px solid #000; }
 .piano-key.active { background: var(--accent); }
-.key-label { position: absolute; bottom: 5px; width: 100%; text-align: center; font-size: 10px; color: #666; pointer-events: none; }
+.key-label { position: absolute; bottom: 5px; left: 0; width: 100%; text-align: center; font-size: 10px; color: #666; pointer-events: none; }
 
-.dropdown-menu {
-    position: fixed; background: #2a2a2a; border: 1px solid #444;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 9999;
-    border-radius: 4px; min-width: 150px; display: flex; flex-direction: column;
-}
-.dropdown-menu button {
-    background: transparent; border: none; text-align: left; padding: 10px 15px;
-    width: 100%; border-radius: 0;
-}
+.dropdown-menu { position: absolute; background: #2a2a2a; border: 1px solid #555; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10000; border-radius: 4px; min-width: 160px; display: flex; flex-direction: column; padding: 5px 0; }
+.dropdown-menu button { background: transparent; border: none; text-align: left; padding: 8px 15px; width: 100%; border-radius: 0; }
 .dropdown-menu button:hover { background: var(--accent); color: #000; }
-.dropdown-separator { height: 1px; background: #444; margin: 2px 0; }
+.dropdown-separator { height: 1px; background: #444; margin: 4px 0; }
