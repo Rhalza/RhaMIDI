@@ -5,9 +5,11 @@ export const PianoRoll = {
     gridCanvas: null,
     noteCanvas: null,
     keysCanvas: null,
+    rulerCanvas: null,
     ctxGrid: null,
     ctxNotes: null,
     ctxKeys: null,
+    ctxRuler: null,
     
     config: {
         noteHeight: 22,
@@ -31,10 +33,12 @@ export const PianoRoll = {
         this.gridCanvas = DOM.el('grid-canvas');
         this.noteCanvas = DOM.el('notes-canvas');
         this.keysCanvas = DOM.el('keys-canvas');
+        this.rulerCanvas = DOM.el('ruler-canvas');
         
         if (this.gridCanvas) this.ctxGrid = this.gridCanvas.getContext('2d');
         if (this.noteCanvas) this.ctxNotes = this.noteCanvas.getContext('2d');
         if (this.keysCanvas) this.ctxKeys = this.keysCanvas.getContext('2d');
+        if (this.rulerCanvas) this.ctxRuler = this.rulerCanvas.getContext('2d');
     },
 
     resize() {
@@ -42,12 +46,21 @@ export const PianoRoll = {
         const totalHeight = 128 * this.config.noteHeight * view.zoomY;
         const totalWidth = view.totalBeats * this.config.beatWidth * view.zoomX;
 
+        // Keys
         if (this.keysCanvas) {
             this.keysCanvas.width = this.config.keysWidth;
             this.keysCanvas.height = totalHeight;
             DOM.el('sticky-keys').style.width = `${this.config.keysWidth}px`;
         }
 
+        // Ruler
+        if (this.rulerCanvas) {
+            this.rulerCanvas.width = totalWidth;
+            this.rulerCanvas.height = 30; // Fixed height from CSS
+            DOM.el('ruler-scroll-area').scrollLeft = view.scrollX;
+        }
+
+        // Grid & Notes
         if (this.gridCanvas) {
             this.gridCanvas.width = totalWidth;
             this.gridCanvas.height = totalHeight;
@@ -63,25 +76,28 @@ export const PianoRoll = {
 
     render() {
         if (!this.ctxGrid) return;
-        
         this.resize();
         this.clear();
         this.drawKeys();
         this.drawGrid();
         this.drawNotes();
+        this.drawRuler();
         this.drawSelectionBox();
     },
 
     clear() {
         this.ctxKeys.fillStyle = '#000';
         this.ctxKeys.fillRect(0, 0, this.keysCanvas.width, this.keysCanvas.height);
-        
         this.ctxGrid.fillStyle = this.config.colors.bg;
         this.ctxGrid.fillRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
-        
         this.ctxNotes.clearRect(0, 0, this.noteCanvas.width, this.noteCanvas.height);
+        this.ctxRuler.fillStyle = '#1f1f1f';
+        this.ctxRuler.fillRect(0, 0, this.rulerCanvas.width, this.rulerCanvas.height);
     },
 
+    // Fixed Y Calculation
+    // Note 127 is at Y=0. Note 0 is at Y=TotalHeight.
+    // Range is [0, 128)
     getY(note) {
         const view = State.project.view;
         const nh = this.config.noteHeight * view.zoomY;
@@ -111,7 +127,6 @@ export const PianoRoll = {
             
             this.ctxKeys.fillStyle = isBlack ? this.config.colors.blackKey : this.config.colors.whiteKey;
             this.ctxKeys.fillRect(0, y, this.config.keysWidth, noteH);
-            
             this.ctxKeys.strokeStyle = '#000';
             this.ctxKeys.strokeRect(0, y, this.config.keysWidth, noteH);
 
@@ -130,6 +145,7 @@ export const PianoRoll = {
         const noteH = this.config.noteHeight * view.zoomY;
         const beatW = this.config.beatWidth * view.zoomX;
 
+        // Rows
         for (let i = 0; i < 128; i++) {
             const y = this.getY(i);
             const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
@@ -142,7 +158,8 @@ export const PianoRoll = {
             this.ctxGrid.stroke();
         }
 
-        for (let i = 0; i < view.totalBeats; i++) {
+        // Beats
+        for (let i = 0; i <= view.totalBeats; i++) {
             const x = this.getX(i);
             this.ctxGrid.strokeStyle = this.config.colors.lineMain;
             this.ctxGrid.beginPath();
@@ -184,6 +201,44 @@ export const PianoRoll = {
             this.ctxNotes.fillStyle = 'rgba(255,255,255,0.4)';
             this.ctxNotes.fillRect(x + w - 5, y+2, 5, noteH-4);
         });
+    },
+
+    drawRuler() {
+        const ctx = this.ctxRuler;
+        const w = this.rulerCanvas.width;
+        const h = this.rulerCanvas.height;
+        const view = State.project.view;
+        const beatW = this.config.beatWidth * view.zoomX;
+        
+        const sigNum = State.project.meta.timeSignature[0];
+        
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h-1);
+        ctx.lineTo(w, h-1);
+        ctx.stroke();
+
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'left';
+
+        for (let i = 0; i <= view.totalBeats; i++) {
+            const x = i * beatW;
+            const measure = Math.floor(i / sigNum) + 1;
+            const beatInMeasure = (i % sigNum) + 1;
+
+            if (i % sigNum === 0) {
+                // Measure Mark
+                ctx.strokeStyle = '#888';
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+                ctx.fillText(measure.toString(), x + 4, 12);
+            } else {
+                // Beat Mark
+                ctx.strokeStyle = '#555';
+                ctx.beginPath(); ctx.moveTo(x, h/2); ctx.lineTo(x, h); ctx.stroke();
+            }
+        }
     },
 
     drawSelectionBox() {
