@@ -4,9 +4,7 @@ import { DOM } from './dom.js';
 export const Inspector = {
     init() {
         const btnAdd = DOM.el('btn-add-fx');
-        if (btnAdd) {
-            btnAdd.onclick = () => this.showFxMenu();
-        }
+        if (btnAdd) btnAdd.onclick = (e) => this.showFxMenu(e);
         this.render();
     },
 
@@ -14,7 +12,6 @@ export const Inspector = {
         const list = DOM.el('fx-list');
         if (!list) return;
         list.innerHTML = '';
-
         const track = State.currentTrack;
         if (!track) {
             list.innerHTML = '<div style="color:#666; padding:10px;">No Track Selected</div>';
@@ -29,37 +26,26 @@ export const Inspector = {
             
             let controls = '';
             
+            const makeRange = (label, param, min, max, step) => `
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:2px;">
+                    <label>${label}</label>
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${fx.params[param]}" data-p="${param}" style="width:100px; accent-color:#00bcd4;">
+                </div>`;
+
             if (fx.type === 'reverb') {
-                controls = `
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                        <label>Mix</label>
-                        <input type="range" min="0" max="1" step="0.01" value="${fx.params.mix}" data-p="mix">
-                    </div>
-                `;
+                controls = makeRange('Mix', 'mix', 0, 1, 0.01);
             } else if (fx.type === 'delay') {
-                controls = `
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:2px;">
-                        <label>Time</label>
-                        <input type="range" min="0" max="1" step="0.01" value="${fx.params.time}" data-p="time">
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                        <label>Fdbk</label>
-                        <input type="range" min="0" max="0.9" step="0.01" value="${fx.params.feedback}" data-p="feedback">
-                    </div>
-                `;
+                controls = makeRange('Time', 'time', 0, 1, 0.01) + makeRange('Fdbk', 'feedback', 0, 0.9, 0.01) + makeRange('Mix', 'mix', 0, 1, 0.01);
             } else if (fx.type === 'distortion') {
-                controls = `
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                        <label>Drive</label>
-                        <input type="range" min="0" max="400" step="10" value="${fx.params.drive}" data-p="drive">
-                    </div>
-                `;
+                controls = makeRange('Drive', 'drive', 0, 400, 10) + makeRange('Mix', 'mix', 0, 1, 0.01);
+            } else if (fx.type === 'chorus') {
+                controls = makeRange('Rate', 'rate', 0.1, 10, 0.1) + makeRange('Depth', 'depth', 0.001, 0.01, 0.001) + makeRange('Mix', 'mix', 0, 1, 0.01);
             }
 
             el.innerHTML = `
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding-bottom:3px; margin-bottom:5px;">
-                    <span style="color:#00e5ff; font-weight:bold; text-transform:capitalize;">${fx.type}</span>
-                    <button class="small-btn remove-fx" data-idx="${index}" style="color:red;">x</button>
+                    <span style="color:#00bcd4; font-weight:bold; text-transform:capitalize;">${fx.type}</span>
+                    <button class="small-btn remove-fx" data-idx="${index}" style="color:#ff4444;">x</button>
                 </div>
                 ${controls}
             `;
@@ -73,37 +59,36 @@ export const Inspector = {
                 };
             });
 
-            const rmBtn = el.querySelector('.remove-fx');
-            rmBtn.onclick = () => {
+            el.querySelector('.remove-fx').onclick = () => {
                 track.effectsData.splice(index, 1);
                 this.render();
             };
-
             list.appendChild(el);
         });
     },
 
-    showFxMenu() {
+    showFxMenu(e) {
         const track = State.currentTrack;
         if (!track) return;
         
+        const rect = e.currentTarget.getBoundingClientRect();
         const existing = document.getElementById('fx-menu');
         if (existing) existing.remove();
 
         const menu = DOM.create('div', 'dropdown-menu');
         menu.id = 'fx-menu';
-        menu.style.cssText = 'position:absolute; bottom:100px; right:200px; background:#333; border:1px solid #555; z-index:200; display:flex; flex-direction:column; padding:5px;';
+        menu.style.top = `${rect.bottom + 5}px`;
+        menu.style.left = `${rect.left - 50}px`; 
         
         const add = (type) => {
-            const btn = DOM.create('button', '', type);
+            const btn = DOM.create('button', '', type.charAt(0).toUpperCase() + type.slice(1));
             btn.onclick = () => {
                 if (!track.effectsData) track.effectsData = [];
-                
                 let defaults = {};
-                if (type === 'reverb') defaults = { mix: 0.3, time: 2.0 };
+                if (type === 'reverb') defaults = { mix: 0.3 };
                 if (type === 'delay') defaults = { time: 0.4, feedback: 0.3, mix: 0.5 };
-                if (type === 'distortion') defaults = { drive: 50 };
-
+                if (type === 'distortion') defaults = { drive: 50, mix: 1.0 };
+                if (type === 'chorus') defaults = { rate: 1.5, depth: 0.002, mix: 0.5 };
                 track.effectsData.push({ type: type, params: defaults });
                 this.render();
                 menu.remove();
@@ -114,11 +99,12 @@ export const Inspector = {
         add('reverb');
         add('delay');
         add('distortion');
+        add('chorus');
 
         document.body.appendChild(menu);
         
-        const closeHandler = (e) => {
-            if (!menu.contains(e.target) && e.target.id !== 'btn-add-fx') {
+        const closeHandler = (ev) => {
+            if (!menu.contains(ev.target) && ev.target.id !== 'btn-add-fx') {
                 menu.remove();
                 document.removeEventListener('click', closeHandler);
             }
