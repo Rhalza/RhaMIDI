@@ -4,12 +4,15 @@ import { Sequencer } from './core/sequencer.js';
 import { AudioEngine } from './audio/audioEngine.js';
 import { PianoRoll } from './ui/pianoRoll.js';
 import { Importer } from './core/importer.js';
+import { Exporter } from './core/exporter.js';
+import { Interaction } from './ui/interaction.js';
 
 const init = () => {
     localforage.config({ name: 'RhaMIDI', storeName: 'soundfonts' });
 
     Sequencer.init();
     PianoRoll.init();
+    Interaction.init();
 
     if (State.project.tracks.length === 0) {
         const track = State.createNewTrack();
@@ -101,6 +104,41 @@ const setupEventListeners = () => {
              if(keyEl) keyEl.classList.remove('active');
         }
     });
+
+    setupMenuButtons();
+};
+
+const setupMenuButtons = () => {
+    const btnContainer = DOM.el('btn-project');
+    const existingMenu = document.getElementById('project-menu-dropdown');
+    if (existingMenu) existingMenu.remove();
+
+    const menu = DOM.create('div', 'dropdown-menu');
+    menu.id = 'project-menu-dropdown';
+    menu.style.cssText = 'position:absolute; top:40px; left:10px; background:#333; padding:10px; display:none; flex-direction:column; gap:5px; z-index:1000; border:1px solid #555;';
+    
+    const mkBtn = (txt, cb) => {
+        const b = DOM.create('button', '', txt);
+        b.onclick = cb;
+        menu.appendChild(b);
+    };
+
+    mkBtn('Load Project', () => DOM.el('file-import-input').click());
+    mkBtn('Save Project (.rhal)', () => Exporter.exportProject('rhal'));
+    mkBtn('Export WAV', () => Exporter.exportProject('wav'));
+    mkBtn('Export MP3', () => Exporter.exportProject('mp3'));
+
+    DOM.el('app-container').appendChild(menu);
+
+    btnContainer.onclick = () => {
+        menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    };
+
+    DOM.el('app-container').addEventListener('click', (e) => {
+        if (e.target !== btnContainer && !menu.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
 };
 
 const renderTrackList = () => {
@@ -112,13 +150,20 @@ const renderTrackList = () => {
         div.innerHTML = `
             <div style="font-weight:bold; color:${track.color}">${track.name}</div>
             <div style="font-size:0.8rem">Vol: ${Math.round(track.volume * 100)}%</div>
+            <button class="small-btn" id="mute-${track.id}">M</button>
+            <button class="small-btn" id="solo-${track.id}">S</button>
         `;
-        div.onclick = () => {
+        div.onclick = (e) => {
+            if(e.target.tagName === 'BUTTON') return;
             State.project.tracks.forEach(t => t.selected = false);
             track.selected = true;
             renderTrackList();
             PianoRoll.render();
         };
+
+        const mBtn = div.querySelector(`#mute-${track.id}`);
+        mBtn.onclick = () => { track.muted = !track.muted; mBtn.style.color = track.muted ? 'red' : 'white'; };
+        
         container.appendChild(div);
     });
 };
