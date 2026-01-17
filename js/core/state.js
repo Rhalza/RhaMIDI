@@ -13,11 +13,12 @@ export const State = {
         view: {
             zoomX: 1.0,
             zoomY: 1.0,
-            scrollX: 0,
-            scrollY: 600, // Start scrolled to middle C
+            scrollX: 0, // Not used heavily with native scroll, but kept for logic
+            scrollY: 0,
             snapToGrid: "1/4",
             magnetEnabled: true,
-            octaveShift: 0
+            octaveShift: 0,
+            totalBeats: 8 // Start small, expand dynamically
         },
         mixer: {
             masterVolume: 1.0,
@@ -26,9 +27,8 @@ export const State = {
         tracks: [] 
     },
     
-    // Runtime state
-    lastNoteDuration: 1.0, // Default duration in beats
-    clipboard: null,
+    lastNoteDuration: 1.0,
+    tool: 'draw', // draw, select, delete
     
     get currentTrack() {
         return this.project.tracks.find(t => t.selected);
@@ -45,7 +45,6 @@ export const State = {
             soloed: false,
             selected: false,
             volume: 0.8,
-            pan: 0,
             color: `hsl(${Math.random() * 360}, 70%, 50%)`,
             effectsData: [], 
             events: [] 
