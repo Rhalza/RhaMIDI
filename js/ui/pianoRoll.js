@@ -12,7 +12,7 @@ export const PianoRoll = {
     config: {
         noteHeight: 22,
         beatWidth: 100,
-        keysWidth: 70, // Width of sticky sidebar
+        keysWidth: 70,
         colors: {
             bg: '#151515',
             lineMain: '#333',
@@ -25,7 +25,6 @@ export const PianoRoll = {
         }
     },
     
-    totalBeats: 200, // Expandable
     selectionRect: null,
 
     init() {
@@ -40,55 +39,46 @@ export const PianoRoll = {
 
     resize() {
         const view = State.project.view;
-        // Total Height = 128 notes * height
         const totalHeight = 128 * this.config.noteHeight * view.zoomY;
-        const totalWidth = this.totalBeats * this.config.beatWidth * view.zoomX;
+        const totalWidth = view.totalBeats * this.config.beatWidth * view.zoomX;
 
-        if (this.keysCanvas) {
+        // Keys Canvas
+        if (this.keysCanvas.height !== totalHeight) {
             this.keysCanvas.width = this.config.keysWidth;
             this.keysCanvas.height = totalHeight;
             DOM.el('sticky-keys').style.width = `${this.config.keysWidth}px`;
+            this.drawKeys(); // Redraw static keys
         }
 
-        if (this.gridCanvas) {
+        // Grid & Notes Canvas
+        if (this.gridCanvas.width !== totalWidth || this.gridCanvas.height !== totalHeight) {
             this.gridCanvas.width = totalWidth;
             this.gridCanvas.height = totalHeight;
-        }
-
-        if (this.noteCanvas) {
             this.noteCanvas.width = totalWidth;
             this.noteCanvas.height = totalHeight;
+            
+            // Set wrapper width to force scroll
+            DOM.el('grid-wrapper').style.width = `${totalWidth}px`;
         }
-
-        // Set Container Dimensions
-        DOM.el('piano-roll-content').style.width = `${totalWidth + this.config.keysWidth}px`;
     },
 
     render() {
         if (!this.ctxGrid) return;
-        
         this.resize();
-        this.clear();
-        this.drawKeys();
+        
+        // Clear Notes & Grid
+        this.ctxGrid.fillStyle = this.config.colors.bg;
+        this.ctxGrid.fillRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
+        this.ctxNotes.clearRect(0, 0, this.noteCanvas.width, this.noteCanvas.height);
+
         this.drawGrid();
         this.drawNotes();
         this.drawSelectionBox();
     },
 
-    clear() {
-        this.ctxKeys.fillStyle = '#000';
-        this.ctxKeys.fillRect(0, 0, this.keysCanvas.width, this.keysCanvas.height);
-        
-        this.ctxGrid.fillStyle = this.config.colors.bg;
-        this.ctxGrid.fillRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
-        
-        this.ctxNotes.clearRect(0, 0, this.noteCanvas.width, this.noteCanvas.height);
-    },
-
     getY(note) {
         const view = State.project.view;
         const nh = this.config.noteHeight * view.zoomY;
-        // 127 is top. 
         return (127 - note) * nh;
     },
 
@@ -103,6 +93,9 @@ export const PianoRoll = {
         const view = State.project.view;
         const noteH = this.config.noteHeight * view.zoomY;
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        this.ctxKeys.fillStyle = '#000';
+        this.ctxKeys.fillRect(0, 0, this.config.keysWidth, h);
 
         this.ctxKeys.font = '11px sans-serif';
         this.ctxKeys.textBaseline = 'middle';
@@ -134,14 +127,12 @@ export const PianoRoll = {
         const noteH = this.config.noteHeight * view.zoomY;
         const beatW = this.config.beatWidth * view.zoomX;
 
-        // Horizontal Rows
+        // Horizontals
         for (let i = 0; i < 128; i++) {
             const y = this.getY(i);
             const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
-            
             this.ctxGrid.fillStyle = isBlack ? '#1a1a1a' : '#212121';
             this.ctxGrid.fillRect(0, y, w, noteH);
-
             this.ctxGrid.strokeStyle = this.config.colors.lineSub;
             this.ctxGrid.beginPath();
             this.ctxGrid.moveTo(0, y + noteH);
@@ -149,8 +140,8 @@ export const PianoRoll = {
             this.ctxGrid.stroke();
         }
 
-        // Vertical Beats
-        for (let i = 0; i < this.totalBeats; i++) {
+        // Verticals
+        for (let i = 0; i < view.totalBeats; i++) {
             const x = this.getX(i);
             this.ctxGrid.strokeStyle = this.config.colors.lineMain;
             this.ctxGrid.beginPath();
@@ -158,7 +149,6 @@ export const PianoRoll = {
             this.ctxGrid.lineTo(x, h);
             this.ctxGrid.stroke();
 
-            // 16th subdivisions
             for (let s = 1; s < 4; s++) {
                 const sx = x + (s * (beatW/4));
                 this.ctxGrid.strokeStyle = this.config.colors.lineSub;
@@ -190,7 +180,6 @@ export const PianoRoll = {
             this.ctxNotes.lineWidth = ev.selected ? 2 : 1;
             this.ctxNotes.strokeRect(x, y+1, w, noteH-2);
             
-            // Resize Handle
             this.ctxNotes.fillStyle = 'rgba(255,255,255,0.4)';
             this.ctxNotes.fillRect(x + w - 5, y+2, 5, noteH-4);
         });
