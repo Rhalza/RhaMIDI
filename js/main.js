@@ -6,6 +6,7 @@ import { PianoRoll } from './ui/pianoRoll.js';
 import { Importer } from './core/importer.js';
 import { Exporter } from './core/exporter.js';
 import { Interaction } from './ui/interaction.js';
+import { Inspector } from './ui/inspector.js';
 
 const init = () => {
     localforage.config({ name: 'RhaMIDI', storeName: 'soundfonts' });
@@ -13,6 +14,7 @@ const init = () => {
     Sequencer.init();
     PianoRoll.init();
     Interaction.init();
+    Inspector.init();
 
     if (State.project.tracks.length === 0) {
         const track = State.createNewTrack();
@@ -28,6 +30,7 @@ const init = () => {
     State.on('projectLoaded', () => {
         renderTrackList();
         PianoRoll.render();
+        Inspector.render();
     });
 
     requestAnimationFrame(uiLoop);
@@ -55,6 +58,17 @@ const setupEventListeners = () => {
 
     DOM.on('bpm-input', 'change', (e) => Sequencer.setBpm(parseInt(e.target.value)));
 
+    DOM.on('btn-add-track', 'click', () => {
+        const t = State.createNewTrack();
+        t.selected = true;
+        State.project.tracks.forEach(track => track.selected = false);
+        t.selected = true;
+        State.project.tracks.push(t);
+        renderTrackList();
+        PianoRoll.render();
+        Inspector.render();
+    });
+
     DOM.on('btn-project', 'click', () => {
         const input = DOM.el('file-import-input');
         input.click();
@@ -79,7 +93,19 @@ const setupEventListeners = () => {
         State.project.view.scrollY = scrollContainer.scrollTop;
     });
 
+    // Octave Shifting
+    DOM.on('btn-octave-up', 'click', () => {
+        State.project.view.octaveShift++;
+        DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift}`;
+    });
+
+    DOM.on('btn-octave-down', 'click', () => {
+        State.project.view.octaveShift--;
+        DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift}`;
+    });
+
     window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return; 
         if (e.repeat) return;
         const keyMap = {
             'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67, 'y': 68, 'h': 69, 'u': 70, 'j': 71,
@@ -149,20 +175,29 @@ const renderTrackList = () => {
         if (track.selected) div.classList.add('selected');
         div.innerHTML = `
             <div style="font-weight:bold; color:${track.color}">${track.name}</div>
-            <div style="font-size:0.8rem">Vol: ${Math.round(track.volume * 100)}%</div>
-            <button class="small-btn" id="mute-${track.id}">M</button>
-            <button class="small-btn" id="solo-${track.id}">S</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                 <button class="small-btn" id="mute-${track.id}" style="color:${track.muted ? 'red' : '#fff'}">M</button>
+                 <button class="small-btn" id="solo-${track.id}" style="color:${track.soloed ? 'yellow' : '#fff'}">S</button>
+                 <input type="range" min="0" max="1" step="0.01" value="${track.volume}" style="width:60px" id="vol-${track.id}">
+            </div>
         `;
         div.onclick = (e) => {
-            if(e.target.tagName === 'BUTTON') return;
+            if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
             State.project.tracks.forEach(t => t.selected = false);
             track.selected = true;
             renderTrackList();
             PianoRoll.render();
+            Inspector.render();
         };
 
         const mBtn = div.querySelector(`#mute-${track.id}`);
-        mBtn.onclick = () => { track.muted = !track.muted; mBtn.style.color = track.muted ? 'red' : 'white'; };
+        mBtn.onclick = () => { track.muted = !track.muted; renderTrackList(); };
+        
+        const sBtn = div.querySelector(`#solo-${track.id}`);
+        sBtn.onclick = () => { track.soloed = !track.soloed; renderTrackList(); };
+
+        const vSli = div.querySelector(`#vol-${track.id}`);
+        vSli.oninput = (e) => { track.volume = parseFloat(e.target.value); };
         
         container.appendChild(div);
     });
