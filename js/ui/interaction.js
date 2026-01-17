@@ -2,6 +2,7 @@ import { State } from '../core/state.js';
 import { DOM } from './dom.js';
 import { PianoRoll } from './pianoRoll.js';
 import { AudioEngine } from '../audio/audioEngine.js';
+import { Sequencer } from '../core/sequencer.js';
 
 export const Interaction = {
     isDragging: false,
@@ -13,14 +14,17 @@ export const Interaction = {
 
     init() {
         const canvas = DOM.el('notes-canvas');
-        if (!canvas) return;
-        canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        const ruler = DOM.el('ruler-scroll-area');
+        if (canvas) {
+            canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+            DOM.on('notes-canvas', 'contextmenu', (e) => { e.preventDefault(); this.handleRightClick(e); });
+        }
+        if (ruler) {
+            ruler.addEventListener('mousedown', (e) => this.handleRulerClick(e));
+        }
+
         window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         window.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        DOM.on('notes-canvas', 'contextmenu', (e) => {
-            e.preventDefault();
-            this.handleRightClick(e);
-        });
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' || e.key === 'Delete') this.deleteSelectedNotes();
         });
@@ -55,16 +59,31 @@ export const Interaction = {
         };
     },
 
+    parseSnap(snapStr) {
+        if (snapStr === '1/1') return 4.0;
+        if (snapStr === '1/2') return 2.0;
+        if (snapStr === '1/4') return 1.0;
+        if (snapStr === '1/8') return 0.5;
+        if (snapStr === '1/16') return 0.25;
+        return 0.25;
+    },
+
     snapBeat(beat) {
-        if (!State.project.view.magnetEnabled || State.project.view.snapToGrid === 'off') return beat;
-        let snapVal = 0.25; 
         const s = State.project.view.snapToGrid;
-        if (s === '1/1') snapVal = 4.0;
-        if (s === '1/2') snapVal = 2.0;
-        if (s === '1/4') snapVal = 1.0;
-        if (s === '1/8') snapVal = 0.5;
-        if (s === '1/16') snapVal = 0.25;
-        return Math.round(beat / snapVal) * snapVal;
+        const val = this.parseSnap(s);
+        return Math.round(beat / val) * val;
+    },
+
+    handleRulerClick(e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left + e.currentTarget.scrollLeft;
+        const view = State.project.view;
+        const beatW = PianoRoll.config.beatWidth * view.zoomX;
+        const beat = x / beatW;
+        Sequencer.setTime(beat);
+        PianoRoll.render(); 
+        const ph = DOM.el('playhead');
+        if(ph) ph.style.left = `${x}px`;
     },
 
     checkDynamicResize(endBeat) {
@@ -87,7 +106,6 @@ export const Interaction = {
         this.dragStart = { ...coords };
         this.isDragging = true;
 
-        // Tool Logic
         if (State.tool === 'select') {
             this.dragAction = 'select_box';
             this.selectionStart = { x: coords.rawX, y: coords.rawY };
@@ -109,13 +127,11 @@ export const Interaction = {
             return;
         }
 
-        // Draw Tool
         if (existingNote) {
             const view = State.project.view;
-            const beatW = PianoRoll.config.beatWidth * view.zoomX;
             const noteEndX = PianoRoll.getX(existingNote.start + existingNote.duration);
             
-            if (Math.abs(coords.rawX - noteEndX) < 10) {
+            if (Math.abs(coords.rawX - noteEndX) < 15) { 
                 this.dragAction = 'resize';
             } else {
                 this.dragAction = 'move';
@@ -128,7 +144,6 @@ export const Interaction = {
             this.activeNote = existingNote;
             this.initialNoteState = { ...existingNote };
         } else {
-            // Create
             if (!e.shiftKey) track.events.forEach(ev => ev.selected = false);
             this.dragAction = 'create';
             const start = this.snapBeat(coords.beat);
@@ -182,10 +197,12 @@ export const Interaction = {
 
         if (this.dragAction === 'resize') {
             let newDur = this.initialNoteState.duration + deltaBeats;
-            if (view.magnetEnabled && view.snapToGrid !== 'off') {
-                newDur = Math.round(newDur / this.parseSnap(view.snapToGrid)) * this.parseSnap(view.snapToGrid);
-            }
-            if (newDur < 0.1) newDur = 0.1;
+            
+            const snapVal = this.parseSnap(view.snapToGrid);
+            newDur = Math.round(newDur / snapVal) * snapVal;
+            
+            if (newDur < snapVal) newDur = snapVal; 
+            
             this.activeNote.duration = newDur;
             State.lastNoteDuration = newDur;
             this.checkDynamicResize(this.activeNote.start + newDur);
@@ -236,9 +253,14 @@ export const Interaction = {
             const bottomNote = 127 - ((rect.y + rect.h) / noteH);
 
             track.events.forEach(ev => {
-                if (ev.note <= topNote && ev.note >= bottomNote && ev.start < endBeat && (ev.start + ev.duration) > startBeat) {
+                const nStart = ev.start;
+                const nEnd = ev.start + ev.duration;
+                // A note is selected if its center Y is within rect Y, and ranges overlap in X
+                if (ev.note <= topNote && ev.note >= bottomNote && nStart < endBeat && nEnd > startBeat) {
                     ev.selected = true;
-                } else if (!e.shiftKey) ev.selected = false;
+                } else if (!e.shiftKey) {
+                    ev.selected = false;
+                }
             });
             PianoRoll.selectionRect = null;
         }
@@ -250,15 +272,6 @@ export const Interaction = {
         this.activeNote = null;
         this.dragAction = null;
         PianoRoll.render();
-    },
-
-    parseSnap(snapStr) {
-        if (snapStr === '1/1') return 4.0;
-        if (snapStr === '1/2') return 2.0;
-        if (snapStr === '1/4') return 1.0;
-        if (snapStr === '1/8') return 0.5;
-        if (snapStr === '1/16') return 0.25;
-        return 0.25;
     },
 
     handleRightClick(e) {
