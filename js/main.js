@@ -27,6 +27,10 @@ const init = () => {
     handleResize();
     setupKeyboardLayout();
     
+    // Initial Render
+    PianoRoll.render();
+    Inspector.render();
+    
     State.on('projectLoaded', () => {
         renderTrackList();
         PianoRoll.render();
@@ -39,6 +43,7 @@ const init = () => {
 const setupEventListeners = () => {
     window.addEventListener('resize', handleResize);
     
+    // Playback
     DOM.on('btn-play', 'click', () => {
         if(Sequencer.isPlaying) {
             Sequencer.stop();
@@ -58,9 +63,9 @@ const setupEventListeners = () => {
 
     DOM.on('bpm-input', 'change', (e) => Sequencer.setBpm(parseInt(e.target.value)));
 
+    // Track
     DOM.on('btn-add-track', 'click', () => {
         const t = State.createNewTrack();
-        t.selected = true;
         State.project.tracks.forEach(track => track.selected = false);
         t.selected = true;
         State.project.tracks.push(t);
@@ -69,13 +74,24 @@ const setupEventListeners = () => {
         Inspector.render();
     });
 
+    // Magnet & Snap
+    DOM.on('icon-magnet', 'click', (e) => {
+        State.project.view.magnetEnabled = !State.project.view.magnetEnabled;
+        e.target.style.color = State.project.view.magnetEnabled ? '#00e5ff' : '#666';
+    });
+
+    DOM.on('grid-snap-select', 'change', (e) => {
+        State.project.view.snapToGrid = e.target.value;
+    });
+
+    // Files
     DOM.on('btn-project', 'click', () => {
         const input = DOM.el('file-import-input');
         input.click();
     });
-    
     DOM.on('file-import-input', 'change', (e) => Importer.handleFileSelect(e));
 
+    // Keyboard (Visual)
     const kb = DOM.el('virtual-keyboard');
     kb.addEventListener('mousedown', (e) => {
         if(e.target.classList.contains('piano-key') || e.target.parentElement.classList.contains('piano-key')) {
@@ -83,29 +99,36 @@ const setupEventListeners = () => {
             const note = parseInt(el.dataset.note);
             AudioEngine.init();
             AudioEngine.resume();
-            AudioEngine.synth.playNote(note + 24, AudioEngine.currentTime, 0.5, 100, 'instrument');
+            const track = State.currentTrack;
+            AudioEngine.synth.playNote(note + 24, AudioEngine.currentTime, 0.5, 100, 'instrument', track ? track.effectsData : []);
         }
     });
 
+    // Piano Roll Scrolling
     const scrollContainer = DOM.el('piano-roll-container');
     scrollContainer.addEventListener('scroll', () => {
         State.project.view.scrollX = scrollContainer.scrollLeft;
         State.project.view.scrollY = scrollContainer.scrollTop;
     });
 
-    // Octave Shifting
+    // Octave Shifting (Bounded 0-8 for safety)
     DOM.on('btn-octave-up', 'click', () => {
-        State.project.view.octaveShift++;
-        DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift}`;
+        if (State.project.view.octaveShift < 4) {
+            State.project.view.octaveShift++;
+            DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift + 4}`;
+        }
     });
 
     DOM.on('btn-octave-down', 'click', () => {
-        State.project.view.octaveShift--;
-        DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift}`;
+        if (State.project.view.octaveShift > -4) {
+            State.project.view.octaveShift--;
+            DOM.el('current-octave').innerText = `Oct ${State.project.view.octaveShift + 4}`;
+        }
     });
 
+    // Computer Keyboard Input
     window.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT') return; 
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; 
         if (e.repeat) return;
         const keyMap = {
             'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67, 'y': 68, 'h': 69, 'u': 70, 'j': 71,
@@ -114,9 +137,15 @@ const setupEventListeners = () => {
         if (keyMap[e.key]) {
             AudioEngine.init();
             AudioEngine.resume();
-            AudioEngine.synth.playNote(keyMap[e.key] + (State.project.view.octaveShift * 12), AudioEngine.currentTime, 0.5, 100, 'instrument');
-            const keyEl = document.querySelector(`[data-note="${keyMap[e.key] - 36}"]`); 
-            if(keyEl) keyEl.classList.add('active');
+            const note = keyMap[e.key] + (State.project.view.octaveShift * 12);
+            // Safety Clamp
+            if (note >= 0 && note <= 127) {
+                const track = State.currentTrack;
+                AudioEngine.synth.playNote(note, AudioEngine.currentTime, 0.5, 100, 'instrument', track ? track.effectsData : []);
+                
+                const keyEl = document.querySelector(`[data-note="${keyMap[e.key] - 36}"]`); 
+                if(keyEl) keyEl.classList.add('active');
+            }
         }
     });
 
@@ -141,18 +170,19 @@ const setupMenuButtons = () => {
 
     const menu = DOM.create('div', 'dropdown-menu');
     menu.id = 'project-menu-dropdown';
-    menu.style.cssText = 'position:absolute; top:40px; left:10px; background:#333; padding:10px; display:none; flex-direction:column; gap:5px; z-index:1000; border:1px solid #555;';
+    menu.style.cssText = 'position:absolute; top:40px; left:10px; background:#333; padding:10px; display:none; flex-direction:column; gap:5px; z-index:1000; border:1px solid #555; box-shadow:0 2px 10px rgba(0,0,0,0.5);';
     
     const mkBtn = (txt, cb) => {
         const b = DOM.create('button', '', txt);
+        b.style.textAlign = 'left';
         b.onclick = cb;
         menu.appendChild(b);
     };
 
-    mkBtn('Load Project', () => DOM.el('file-import-input').click());
-    mkBtn('Save Project (.rhal)', () => Exporter.exportProject('rhal'));
-    mkBtn('Export WAV', () => Exporter.exportProject('wav'));
-    mkBtn('Export MP3', () => Exporter.exportProject('mp3'));
+    mkBtn('<i class="fa-solid fa-folder-open"></i> Load Project', () => DOM.el('file-import-input').click());
+    mkBtn('<i class="fa-solid fa-floppy-disk"></i> Save Project (.rhal)', () => Exporter.exportProject('rhal'));
+    mkBtn('<i class="fa-solid fa-file-audio"></i> Export WAV', () => Exporter.exportProject('wav'));
+    mkBtn('<i class="fa-solid fa-file-audio"></i> Export MP3', () => Exporter.exportProject('mp3'));
 
     DOM.el('app-container').appendChild(menu);
 
@@ -173,16 +203,21 @@ const renderTrackList = () => {
     State.project.tracks.forEach(track => {
         const div = DOM.create('div', 'track-control');
         if (track.selected) div.classList.add('selected');
+        
+        // Icons
+        const muteIcon = track.muted ? '<i class="fa-solid fa-volume-xmark"></i>' : 'M';
+        const soloIcon = track.soloed ? '<i class="fa-solid fa-star"></i>' : 'S';
+
         div.innerHTML = `
-            <div style="font-weight:bold; color:${track.color}">${track.name}</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                 <button class="small-btn" id="mute-${track.id}" style="color:${track.muted ? 'red' : '#fff'}">M</button>
-                 <button class="small-btn" id="solo-${track.id}" style="color:${track.soloed ? 'yellow' : '#fff'}">S</button>
-                 <input type="range" min="0" max="1" step="0.01" value="${track.volume}" style="width:60px" id="vol-${track.id}">
+            <div style="font-weight:bold; color:${track.color}; margin-bottom:5px;">${track.name}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                 <button class="small-btn" id="mute-${track.id}" style="color:${track.muted ? '#ff4444' : '#fff'}; width:25px;">${muteIcon}</button>
+                 <button class="small-btn" id="solo-${track.id}" style="color:${track.soloed ? '#ffcc00' : '#fff'}; width:25px;">${soloIcon}</button>
+                 <input type="range" min="0" max="1" step="0.01" value="${track.volume}" style="width:60px" id="vol-${track.id}" title="Volume">
             </div>
         `;
         div.onclick = (e) => {
-            if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'I') return;
             State.project.tracks.forEach(t => t.selected = false);
             track.selected = true;
             renderTrackList();
@@ -239,10 +274,10 @@ const setupKeyboardLayout = () => {
 const togglePlayButton = (playing) => {
     const btn = DOM.el('btn-play');
     if(playing) {
-        btn.innerHTML = '&#10074;&#10074;'; 
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i>'; 
         btn.classList.add('active');
     } else {
-        btn.innerHTML = '&#9658;';
+        btn.innerHTML = '<i class="fa-solid fa-play"></i>';
         btn.classList.remove('active');
     }
 };
