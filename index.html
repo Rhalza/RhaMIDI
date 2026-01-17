@@ -21,30 +21,38 @@
             <div class="menu-bar">
                 <button id="btn-project" class="menu-btn"><i class="fa-solid fa-folder"></i> Project</button>
                 <button id="btn-add-track"><i class="fa-solid fa-plus"></i> Track</button>
+                <button id="btn-options"><i class="fa-solid fa-bars"></i> Options</button>
             </div>
 
             <div class="transport-bar">
                 <div class="time-display" id="time-display">00:00:00</div>
-                <button id="btn-rewind" class="transport-btn"><i class="fa-solid fa-backward-step"></i></button>
-                <button id="btn-play" class="transport-btn"><i class="fa-solid fa-play"></i></button>
-                <button id="btn-stop" class="transport-btn"><i class="fa-solid fa-stop"></i></button>
+                <button id="btn-rewind" class="transport-btn" title="Rewind to Start"><i class="fa-solid fa-backward-step"></i></button>
+                <button id="btn-play" class="transport-btn" title="Play/Pause (Space)"><i class="fa-solid fa-play"></i></button>
+                <button id="btn-stop" class="transport-btn" title="Stop"><i class="fa-solid fa-stop"></i></button>
                 <button id="btn-record" class="transport-btn record-btn"><i class="fa-solid fa-circle"></i></button>
                 
                 <div class="control-group">
-                    <i class="fa-solid fa-magnet" id="icon-magnet" title="Snap to Grid"></i>
+                    <div id="magnet-btn-wrapper" style="cursor:pointer; padding:5px;">
+                        <i class="fa-solid fa-magnet" id="icon-magnet" title="Toggle Snap" style="color:#00bcd4;"></i>
+                    </div>
                     <select id="grid-snap-select" class="dark-select">
-                        <option value="1/1">1/1</option>
-                        <option value="1/2">1/2</option>
-                        <option value="1/4" selected>1/4</option>
-                        <option value="1/8">1/8</option>
-                        <option value="1/16">1/16</option>
-                        <option value="off">Off</option>
+                        <option value="1/1">1/1 (4 Beats)</option>
+                        <option value="1/2">1/2 (2 Beats)</option>
+                        <option value="1/4" selected>1/4 (1 Beat)</option>
+                        <option value="1/8">1/8 (1/2 Beat)</option>
+                        <option value="1/16">1/16 (1/4 Beat)</option>
                     </select>
                 </div>
 
                 <div class="bpm-control">
                     <input type="number" id="bpm-input" value="120" min="20" max="999">
                     <label>BPM</label>
+                </div>
+                
+                <div class="sig-control" style="display:flex; align-items:center; gap:2px; margin-left:10px; font-size:0.8rem;">
+                    <input type="number" id="sig-num" value="4" style="width:30px; background:#000; color:#fff; border:1px solid #444; text-align:center;">
+                    <span>/</span>
+                    <input type="number" id="sig-den" value="4" style="width:30px; background:#000; color:#fff; border:1px solid #444; text-align:center;">
                 </div>
             </div>
         </header>
@@ -65,7 +73,15 @@
                         <button class="tool-btn" id="tool-delete" title="Delete (Del)"><i class="fa-solid fa-eraser"></i></button>
                     </div>
                     <div class="tool-separator"></div>
-                    <span id="mouse-coords"></span>
+                    <span id="mouse-coords" style="font-family:monospace; color:#888;"></span>
+                </div>
+
+                <!-- Ruler is now separate fixed header inside viewport structure -->
+                <div id="ruler-wrapper">
+                    <div id="ruler-corner"></div> <!-- Empty space above keys -->
+                    <div id="ruler-scroll-area">
+                        <canvas id="ruler-canvas"></canvas>
+                    </div>
                 </div>
 
                 <div id="piano-roll-viewport">
@@ -76,9 +92,7 @@
                         <div id="grid-wrapper">
                             <canvas id="grid-canvas"></canvas>
                             <canvas id="notes-canvas"></canvas>
-                            <div id="playhead">
-                                <div class="playhead-triangle"></div>
-                            </div>
+                            <div id="playhead"></div>
                         </div>
                     </div>
                 </div>
