@@ -19,20 +19,20 @@
             </div>
             
             <div class="menu-bar">
-                <button id="btn-project"><i class="fa-solid fa-folder"></i> Project</button>
+                <button id="btn-project" class="menu-btn"><i class="fa-solid fa-folder"></i> Project</button>
                 <button id="btn-add-track"><i class="fa-solid fa-plus"></i> Track</button>
                 <button id="btn-settings"><i class="fa-solid fa-gear"></i> Settings</button>
             </div>
 
             <div class="transport-bar">
-                <div class="time-display">00:00:00</div>
+                <div class="time-display" id="time-display">00:00:00</div>
                 <button id="btn-rewind" class="transport-btn"><i class="fa-solid fa-backward-step"></i></button>
                 <button id="btn-play" class="transport-btn"><i class="fa-solid fa-play"></i></button>
                 <button id="btn-stop" class="transport-btn"><i class="fa-solid fa-stop"></i></button>
                 <button id="btn-record" class="transport-btn record-btn"><i class="fa-solid fa-circle"></i></button>
                 
                 <div class="control-group">
-                    <i class="fa-solid fa-magnet" id="icon-magnet" style="color:#666; cursor:pointer; margin-right:5px;"></i>
+                    <i class="fa-solid fa-magnet" id="icon-magnet" title="Snap to Grid"></i>
                     <select id="grid-snap-select" class="dark-select">
                         <option value="1/1">1/1</option>
                         <option value="1/2">1/2</option>
@@ -59,13 +59,29 @@
             </aside>
 
             <main id="sequencer-area">
-                <div id="ruler-container">
-                    <canvas id="ruler-canvas"></canvas>
+                <div id="piano-roll-toolbar">
+                    <div class="tool-group">
+                        <button class="tool-btn active" id="tool-draw" title="Draw (D)"><i class="fa-solid fa-pencil"></i></button>
+                        <button class="tool-btn" id="tool-select" title="Select (S)"><i class="fa-solid fa-arrow-pointer"></i></button>
+                        <button class="tool-btn" id="tool-delete" title="Delete (Del)"><i class="fa-solid fa-eraser"></i></button>
+                    </div>
+                    <div class="tool-separator"></div>
+                    <span id="mouse-coords"></span>
                 </div>
-                <div id="piano-roll-container">
-                    <canvas id="grid-canvas"></canvas>
-                    <canvas id="notes-canvas"></canvas>
-                    <div id="playhead"></div>
+
+                <div id="piano-roll-viewport">
+                    <div id="piano-roll-content">
+                        <div id="sticky-keys">
+                            <canvas id="keys-canvas"></canvas>
+                        </div>
+                        <div id="grid-wrapper">
+                            <canvas id="grid-canvas"></canvas>
+                            <canvas id="notes-canvas"></canvas>
+                            <div id="playhead">
+                                <div class="playhead-triangle"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
 
@@ -84,14 +100,12 @@
                 <button id="btn-octave-down"><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="current-octave">Oct 4</span>
                 <button id="btn-octave-up"><i class="fa-solid fa-chevron-right"></i></button>
-                <button id="btn-close-kb"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="virtual-keyboard"></div>
         </div>
 
         <footer id="status-bar">
             <span id="status-msg">Ready</span>
-            <span id="mouse-coords"></span>
         </footer>
     </div>
 
