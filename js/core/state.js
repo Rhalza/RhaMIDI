@@ -3,32 +3,22 @@ export const State = {
         meta: {
             name: "Untitled Project",
             version: "1.0",
-            author: "User",
-            created: Date.now(),
             bpm: 120,
-            timeSignature: [4, 4],
-            keySignature: "C",
-            ppq: 96 
+            timeSignature: [4, 4]
         },
         view: {
             zoomX: 1.0,
             zoomY: 1.0,
-            scrollX: 0, // Not used heavily with native scroll, but kept for logic
-            scrollY: 0,
+            totalBeats: 8, 
             snapToGrid: "1/4",
             magnetEnabled: true,
-            octaveShift: 0,
-            totalBeats: 8 // Start small, expand dynamically
-        },
-        mixer: {
-            masterVolume: 1.0,
-            globalEffects: [] 
+            octaveShift: 0
         },
         tracks: [] 
     },
     
     lastNoteDuration: 1.0,
-    tool: 'draw', // draw, select, delete
+    tool: 'draw', 
     
     get currentTrack() {
         return this.project.tracks.find(t => t.selected);
@@ -53,6 +43,7 @@ export const State = {
 
     loadProject(rhalData) {
         this.project = rhalData;
+        if (!this.project.view.totalBeats) this.project.view.totalBeats = 8;
         this.emit("projectLoaded");
     },
 
