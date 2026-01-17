@@ -2,23 +2,31 @@ import { State } from './core/state.js';
 import { DOM } from './ui/dom.js';
 import { Sequencer } from './core/sequencer.js';
 import { AudioEngine } from './audio/audioEngine.js';
+import { PianoRoll } from './ui/pianoRoll.js';
+import { Importer } from './core/importer.js';
 
 const init = () => {
-    console.log("RhaMIDI Initializing...");
-
     localforage.config({ name: 'RhaMIDI', storeName: 'soundfonts' });
 
     Sequencer.init();
+    PianoRoll.init();
 
-    const track = State.createNewTrack();
-    track.selected = true;
-    State.project.tracks.push(track);
+    if (State.project.tracks.length === 0) {
+        const track = State.createNewTrack();
+        track.selected = true;
+        State.project.tracks.push(track);
+    }
     
     renderTrackList();
     setupEventListeners();
     handleResize();
     setupKeyboardLayout();
     
+    State.on('projectLoaded', () => {
+        renderTrackList();
+        PianoRoll.render();
+    });
+
     requestAnimationFrame(uiLoop);
 };
 
@@ -26,8 +34,13 @@ const setupEventListeners = () => {
     window.addEventListener('resize', handleResize);
     
     DOM.on('btn-play', 'click', () => {
-        Sequencer.play();
-        togglePlayButton(true);
+        if(Sequencer.isPlaying) {
+            Sequencer.stop();
+            togglePlayButton(false);
+        } else {
+            Sequencer.play();
+            togglePlayButton(true);
+        }
     });
 
     DOM.on('btn-stop', 'click', () => {
@@ -37,11 +50,17 @@ const setupEventListeners = () => {
         if(timeDisplay) timeDisplay.innerText = "00:00:00";
     });
 
-    DOM.on('bpm-input', 'change', (e) => {
-        Sequencer.setBpm(parseInt(e.target.value));
-    });
+    DOM.on('bpm-input', 'change', (e) => Sequencer.setBpm(parseInt(e.target.value)));
 
-    DOM.on('virtual-keyboard', 'mousedown', (e) => {
+    DOM.on('btn-project', 'click', () => {
+        const input = DOM.el('file-import-input');
+        input.click();
+    });
+    
+    DOM.on('file-import-input', 'change', (e) => Importer.handleFileSelect(e));
+
+    const kb = DOM.el('virtual-keyboard');
+    kb.addEventListener('mousedown', (e) => {
         if(e.target.classList.contains('piano-key') || e.target.parentElement.classList.contains('piano-key')) {
             const el = e.target.classList.contains('piano-key') ? e.target : e.target.parentElement;
             const note = parseInt(el.dataset.note);
@@ -51,7 +70,12 @@ const setupEventListeners = () => {
         }
     });
 
-    // Keyboard Input
+    const scrollContainer = DOM.el('piano-roll-container');
+    scrollContainer.addEventListener('scroll', () => {
+        State.project.view.scrollX = scrollContainer.scrollLeft;
+        State.project.view.scrollY = scrollContainer.scrollTop;
+    });
+
     window.addEventListener('keydown', (e) => {
         if (e.repeat) return;
         const keyMap = {
@@ -93,6 +117,7 @@ const renderTrackList = () => {
             State.project.tracks.forEach(t => t.selected = false);
             track.selected = true;
             renderTrackList();
+            PianoRoll.render();
         };
         container.appendChild(div);
     });
@@ -107,6 +132,7 @@ const handleResize = () => {
         gridCanvas.height = canvasContainer.clientHeight;
         notesCanvas.width = canvasContainer.clientWidth;
         notesCanvas.height = canvasContainer.clientHeight;
+        PianoRoll.render();
     }
     const kb = DOM.el('virtual-keyboard-wrapper');
     if(kb) kb.style.width = '100%'; 
@@ -143,13 +169,22 @@ const togglePlayButton = (playing) => {
 
 const uiLoop = () => {
     const timeDisplay = DOM.el('time-display');
+    
     if (Sequencer.isPlaying) {
          const totalSeconds = Sequencer.currentSixteenthNote * (60 / Sequencer.bpm) / 4;
          const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
          const secs = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
          const ms = Math.floor((totalSeconds % 1) * 100).toString().padStart(2, '0');
          timeDisplay.innerText = `${mins}:${secs}:${ms}`;
+         
+         const playhead = DOM.el('playhead');
+         const view = State.project.view;
+         const beatW = PianoRoll.config.beatWidth * view.zoomX;
+         const px = (Sequencer.currentSixteenthNote / 4) * beatW - view.scrollX + PianoRoll.config.keysWidth;
+         playhead.style.left = `${px}px`;
     }
+    
+    PianoRoll.render();
     requestAnimationFrame(uiLoop);
 };
 
