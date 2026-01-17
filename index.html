@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RhaMIDI Studio</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 </head>
@@ -14,30 +15,37 @@
         <header id="top-bar">
             <div class="logo-area">
                 <h1>RhaMIDI</h1>
-                <span class="version">2026 Edition</span>
+                <span class="version">2026</span>
             </div>
             
             <div class="menu-bar">
-                <button id="btn-project">Project</button>
-                <button id="btn-track">Track</button>
-                <button id="btn-fx">Effects</button>
-                <button id="btn-settings">Settings</button>
+                <button id="btn-project"><i class="fa-solid fa-folder"></i> Project</button>
+                <button id="btn-add-track"><i class="fa-solid fa-plus"></i> Track</button>
+                <button id="btn-settings"><i class="fa-solid fa-gear"></i> Settings</button>
             </div>
 
             <div class="transport-bar">
                 <div class="time-display">00:00:00</div>
-                <button id="btn-rewind" class="transport-btn">|&lt;</button>
-                <button id="btn-play" class="transport-btn">&#9658;</button>
-                <button id="btn-stop" class="transport-btn">&#9632;</button>
-                <button id="btn-record" class="transport-btn record-btn">&#9679;</button>
+                <button id="btn-rewind" class="transport-btn"><i class="fa-solid fa-backward-step"></i></button>
+                <button id="btn-play" class="transport-btn"><i class="fa-solid fa-play"></i></button>
+                <button id="btn-stop" class="transport-btn"><i class="fa-solid fa-stop"></i></button>
+                <button id="btn-record" class="transport-btn record-btn"><i class="fa-solid fa-circle"></i></button>
+                
+                <div class="control-group">
+                    <i class="fa-solid fa-magnet" id="icon-magnet" style="color:#666; cursor:pointer; margin-right:5px;"></i>
+                    <select id="grid-snap-select" class="dark-select">
+                        <option value="1/1">1/1</option>
+                        <option value="1/2">1/2</option>
+                        <option value="1/4" selected>1/4</option>
+                        <option value="1/8">1/8</option>
+                        <option value="1/16">1/16</option>
+                        <option value="off">Off</option>
+                    </select>
+                </div>
+
                 <div class="bpm-control">
                     <input type="number" id="bpm-input" value="120" min="20" max="999">
                     <label>BPM</label>
-                </div>
-                <div class="time-sig-control">
-                    <input type="number" id="sig-num" value="4" class="sig-input">
-                    <span>/</span>
-                    <input type="number" id="sig-den" value="4" class="sig-input">
                 </div>
             </div>
         </header>
@@ -46,7 +54,6 @@
             <aside id="track-sidebar">
                 <div class="sidebar-header">
                     <span>Tracks</span>
-                    <button id="btn-add-track">+</button>
                 </div>
                 <div id="track-list-container"></div>
             </aside>
@@ -64,10 +71,9 @@
 
             <aside id="inspector-sidebar">
                 <div class="inspector-panel" id="fx-panel">
-                    <h3>Effect Rack</h3>
+                    <h3><i class="fa-solid fa-sliders"></i> FX Rack</h3>
                     <div id="fx-list"></div>
-                    <button id="btn-add-fx">Add FX</button>
-                    <button id="btn-load-rhalfx">Load .rhalfx</button>
+                    <button id="btn-add-fx"><i class="fa-solid fa-plus"></i> Add FX</button>
                 </div>
             </aside>
         </div>
@@ -75,24 +81,21 @@
         <div id="virtual-keyboard-wrapper">
             <div class="kb-handle" id="kb-resize-handle"></div>
             <div class="kb-controls">
-                <button id="btn-octave-down">&lt; Oct</button>
-                <span id="current-octave">C4</span>
-                <button id="btn-octave-up">Oct &gt;</button>
-                <button id="btn-close-kb">x</button>
+                <button id="btn-octave-down"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="current-octave">Oct 4</span>
+                <button id="btn-octave-up"><i class="fa-solid fa-chevron-right"></i></button>
+                <button id="btn-close-kb"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="virtual-keyboard"></div>
         </div>
 
         <footer id="status-bar">
             <span id="status-msg">Ready</span>
-            <span id="cpu-usage">CPU: 0%</span>
-            <span id="polyphony">Voices: 0</span>
+            <span id="mouse-coords"></span>
         </footer>
     </div>
 
     <input type="file" id="file-import-input" style="display: none;" accept=".mid,.midi,.rhal,.sf2">
-    <input type="file" id="fx-import-input" style="display: none;" accept=".rhalfx">
-    
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
