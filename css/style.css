@@ -2,12 +2,8 @@
     --bg-dark: #121212;
     --bg-panel: #1f1f1f;
     --accent: #00bcd4;
-    --accent-hover: #26c6da;
     --text-main: #ececec;
     --border: #333;
-    --track-height: 90px;
-    --key-white: #e0e0e0;
-    --key-black: #111;
 }
 
 * { box-sizing: border-box; user-select: none; }
@@ -23,7 +19,7 @@ button:hover { background: #444; }
 button.active { background: var(--accent); color: #000; font-weight: bold; }
 
 .transport-bar { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.time-display { font-family: monospace; font-size: 1.1rem; color: var(--accent); background: #000; padding: 4px 8px; border-radius: 3px; min-width: 80px; text-align: center; }
+.control-group { display: flex; align-items: center; gap: 10px; border-left: 1px solid #444; padding-left: 10px; }
 
 #workspace { flex: 1; display: flex; overflow: hidden; background: #000; position: relative; }
 #track-sidebar, #inspector-sidebar { width: 250px; background: var(--bg-panel); display: flex; flex-direction: column; z-index: 20; border-right: 1px solid #000; }
@@ -35,18 +31,23 @@ button.active { background: var(--accent); color: #000; font-weight: bold; }
 
 #sequencer-area { flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden; }
 #piano-roll-toolbar { height: 36px; background: #222; border-bottom: 1px solid #000; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 30; }
-.tool-group { display: flex; gap: 2px; }
-.tool-btn { padding: 4px 8px; }
+
+/* Ruler Layout */
+#ruler-wrapper { display: flex; height: 30px; background: #1f1f1f; border-bottom: 1px solid #000; z-index: 25; }
+#ruler-corner { width: 70px; background: #1f1f1f; border-right: 1px solid #333; flex-shrink: 0; }
+#ruler-scroll-area { flex: 1; position: relative; overflow: hidden; cursor: pointer; }
+#ruler-canvas { position: absolute; top: 0; left: 0; }
 
 #piano-roll-viewport { flex: 1; overflow: auto; position: relative; background: #151515; }
 #piano-roll-content { position: relative; display: flex; min-height: 100%; }
-#sticky-keys { position: sticky; left: 0; z-index: 10; background: #151515; border-right: 1px solid #333; flex-shrink: 0; overflow: hidden; }
+#sticky-keys { position: sticky; left: 0; z-index: 21; background: #151515; border-right: 1px solid #333; flex-shrink: 0; overflow: hidden; }
 #grid-wrapper { position: relative; flex: 1; }
 #grid-canvas, #notes-canvas { position: absolute; top: 0; left: 0; }
-#playhead { position: absolute; top: 0; width: 1px; height: 100%; background: #fff; z-index: 5; pointer-events: none; }
-.playhead-triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; position: absolute; left: -6px; top: 0; }
 
-#virtual-keyboard-wrapper { height: 150px; background: #1e1e1e; border-top: 2px solid var(--accent); display: flex; flex-direction: column; z-index: 40; position: relative; }
+#playhead { position: absolute; top: 0; width: 2px; height: 100%; background: #fff; z-index: 22; pointer-events: none; }
+.playhead-triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; position: absolute; left: -5px; top: 0; }
+
+#virtual-keyboard-wrapper { height: 160px; background: #1e1e1e; border-top: 2px solid var(--accent); display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; }
 .kb-handle { height: 6px; background: #333; cursor: ns-resize; border-bottom: 1px solid #000; }
 .kb-controls { background: #111; padding: 4px; display: flex; justify-content: center; gap: 20px; }
 #virtual-keyboard { flex: 1; display: flex; overflow-x: auto; padding: 5px; background: #000; white-space: nowrap; }
@@ -55,9 +56,7 @@ button.active { background: var(--accent); color: #000; font-weight: bold; }
 .key-white { width: 40px; background: #ddd; border: 1px solid #000; z-index: 1; }
 .key-black { width: 24px; background: #111; height: 60%; margin-left: -12px; margin-right: -12px; z-index: 2; border: 1px solid #000; }
 .piano-key.active { background: var(--accent); }
-.key-label { position: absolute; bottom: 5px; left: 0; width: 100%; text-align: center; font-size: 10px; color: #666; pointer-events: none; }
 
 .dropdown-menu { position: absolute; background: #2a2a2a; border: 1px solid #555; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10000; border-radius: 4px; min-width: 160px; display: flex; flex-direction: column; padding: 5px 0; }
 .dropdown-menu button { background: transparent; border: none; text-align: left; padding: 8px 15px; width: 100%; border-radius: 0; }
 .dropdown-menu button:hover { background: var(--accent); color: #000; }
-.dropdown-separator { height: 1px; background: #444; margin: 4px 0; }
